@@ -1,29 +1,42 @@
 import InputStream from './InputStream';
 
 /**
- * 表达式内容
- * 字面量: number string
- * 常量: true false null undefined
- * 组合: ( )
- * 运算符:
- *  二元运算符 ( +、-、*、/ )
- *  函数
- */
-
-/**
  * token 类型:
  * punc: 特殊操作符: ( )
  * num: 数字: 1 2 3 4 5 6 7 8 9 0
  * str: 字符串: "hello"
  * ident: 变量名: a b c d e f g h i j k l m n o p q r s t u v w x y z
- * op: 操作符: + - * / = == != < > <= >=
+ * op: 操作符: + - * /
  */
 
+type TokenType = 'punc' | 'num' | 'str' | 'ident' | 'op';
+
+type Token = {
+  type: TokenType;
+  value: string | number;
+};
+
 export default class TokenStream {
+  private current: Token | null = null;
+
   constructor(private input: InputStream) {
   }
 
-  public readNext(): any {
+  public peek(): Token | null {
+    return this.current || (this.current = this.readNext());
+  }
+
+  public next(): Token | null {
+    const tok = this.current;
+    this.current = null;
+    return tok || this.readNext();
+  }
+
+  public eof() {
+    return this.peek() === null;
+  }
+
+  private readNext(): Token | null {
     const input = this.input;
     this.readWhile(this.isWhitespace);
     if(input.eof()) {
@@ -40,7 +53,7 @@ export default class TokenStream {
     if(/[0-9]/.test(ch)) {
       return this.readNumber();
     }
-    if(/[+\-*/=<>!]/.test(ch)) {
+    if(/[+\-*]/.test(ch)) {
       return this.readOp();
     }
     if(/[a-zA-Z_]/.test(ch)) {
@@ -52,37 +65,49 @@ export default class TokenStream {
     throw new Error('invalid character');
   }
 
-  private readPunc(): any {
+  private readPunc(): Token {
     const input = this.input;
     let punc = '';
-    let ch = input.next();
+    let ch = input.peek();
     while(/[()]/.test(ch)) {
       punc += ch;
-      ch = input.next();
+      input.next();
+      ch = input.peek();
     }
-    return punc;
+    return {
+      type: 'punc',
+      value: punc
+    };
   }
 
-  private readOp(): any {
+  private readOp(): Token {
     const input = this.input;
     let op = '';
-    let ch = input.next();
-    while(/[+\-*/=<>!]/.test(ch)) {
+    let ch = input.peek();
+    while(/[+\-*]/.test(ch)) {
       op += ch;
-      ch = input.next();
+      input.next();
+      ch = input.peek();
     }
-    return op;
+    return {
+      type: 'op',
+      value: op
+    };
   }
 
-  private readIdent(): any {
+  private readIdent(): Token {
     const input = this.input;
     let ident = '';
-    let ch = input.next();
+    let ch = input.peek();
     while(/[a-zA-Z_]/.test(ch)) {
       ident += ch;
-      ch = input.next();
+      input.next();
+      ch = input.peek();
     }
-    return ident;
+    return {
+      type: 'ident',
+      value: ident
+    };
   }
 
   private isWhitespace(ch: string) {
@@ -95,11 +120,11 @@ export default class TokenStream {
     this.readWhile(ch => ch !== '\n');
   }
 
-  private readNumber() {
+  private readNumber(): Token {
     const input = this.input;
     let dot = false;
     let num = '';
-    let ch = input.next();
+    let ch = input.peek();
     while(/[0-9.]/.test(ch)) {
       if(ch === '.') {
         if(dot) {
@@ -109,12 +134,16 @@ export default class TokenStream {
         }
       }
       num += ch;
-      ch = input.next();
+      input.next();
+      ch = input.peek();
     }
-    return parseInt(num);
+    return {
+      type: 'num',
+      value: Number(num)
+    };
   }
 
-  private readString() {
+  private readString(): Token {
     const input = this.input;
     input.next();
     let str = '';
@@ -126,14 +155,18 @@ export default class TokenStream {
         throw new Error('unexpected newline in string');
       }
     }
-    return str;
+    return {
+      type: 'str',
+      value: str
+    };
   }
 
   private readWhile(test: (ch: string) => boolean) {
     const input = this.input;
-    let ch = input.next();
+    let ch = input.peek();
     while(test(ch)) {
-      ch = input.next();
+      input.next();
+      ch = input.peek();
     }
   }
 }

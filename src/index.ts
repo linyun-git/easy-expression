@@ -10,3 +10,5 @@ export default class ExpressionJs {
     return null;
   }
 }
+
+export { default as Parser } from './Parser';
