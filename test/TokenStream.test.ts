@@ -62,3 +62,25 @@ test('test (1 + 1) + x * (2 - 2)', () => {
     { type: 'punc', value: ')' }
   ]);
 });
+
+test('test add(a + 1, 1*2*3)', () => {
+  const input = new TokenStream(new InputStream('add(a + 1, 1*2*3)'));
+  const tokens: any[] = [];
+  while(!input.eof()) {
+    tokens.push(input.next());
+  }
+  expect(tokens).toEqual([
+    { type: 'ident', value: 'add' },
+    { type: 'punc', value: '(' },
+    { type: 'ident', value: 'a' },
+    { type: 'op', value: '+' },
+    { type: 'num', value: 1 },
+    { type: 'punc', value: ',' },
+    { type: 'num', value: 1 },
+    { type: 'op', value: '*' },
+    { type: 'num', value: 2 },
+    { type: 'op', value: '*' },
+    { type: 'num', value: 3 },
+    { type: 'punc', value: ')' }
+  ]);
+});

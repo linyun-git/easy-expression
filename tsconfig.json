@@ -1,4 +1,10 @@
 {
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "noImplicitAny": false
+    }
+  },
   "compilerOptions": {
     "removeComments": false,
     "target": "esnext",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */

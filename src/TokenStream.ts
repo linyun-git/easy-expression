@@ -59,25 +59,13 @@ export default class TokenStream {
     if(/[a-zA-Z_]/.test(ch)) {
       return this.readIdent();
     }
-    if(/[()]/.test(ch)) {
-      return this.readPunc();
+    if(/[(),]/.test(ch)) {
+      return {
+        type: 'punc',
+        value: input.next()
+      };
     }
-    throw new Error('invalid character');
-  }
-
-  private readPunc(): Token {
-    const input = this.input;
-    let punc = '';
-    let ch = input.peek();
-    while(/[()]/.test(ch)) {
-      punc += ch;
-      input.next();
-      ch = input.peek();
-    }
-    return {
-      type: 'punc',
-      value: punc
-    };
+    throw new Error(`invalid character: ${ch}`);
   }
 
   private readOp(): Token {

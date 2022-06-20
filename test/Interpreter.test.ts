@@ -9,8 +9,17 @@ test('test run', () => {
 });
 
 test('test runWithEnv', () => {
-  const interpreter = new InterPreter(new Parser(new TokenStream(new InputStream('a + 1 + 1 * 2'))));
+  const interpreter = new InterPreter(new Parser(new TokenStream(new InputStream('add(a + 1, 1*2*3)'))));
   expect(interpreter.runWithEnv({
-    a: 10
-  })).toBe(13);
+    a: 10,
+    add: (a, b) => a + b
+  })).toBe(17);
+});
+
+test('test nested func', () => {
+  const interpreter = new InterPreter(new Parser(new TokenStream(new InputStream('add(add(a, 1), 1*2*3)'))));
+  expect(interpreter.runWithEnv({
+    a: 10,
+    add: (a, b) => a + b
+  })).toBe(17);
 });

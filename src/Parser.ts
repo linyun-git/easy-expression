@@ -30,7 +30,7 @@ type BinaryNode = {
 type CallNode = {
   type: 'call';
   // eslint-disable-next-line no-use-before-define
-  func: ExpressionNode;
+  func: IdentNode;
   // eslint-disable-next-line no-use-before-define
   args: Array<ExpressionNode>;
 }
@@ -98,54 +98,52 @@ export default class Parser {
 
   private maybeBinary(left: ExpressionNode, prec: number): ExpressionNode {
     const input = this.input;
-    const tok = this.isOp();
-    if(tok) {
-      const hisPrec = PRECEDENCE[tok.value as '+' | '-'];
+    const op = this.isOp();
+    if(op) {
+      const hisPrec = PRECEDENCE[op.value as '+' | '-'];
       if(hisPrec > prec) {
         input.next();
+        const right = this.maybeBinary(this.parseAtom(), hisPrec);
         return this.maybeBinary({
           type: 'binary',
-          op: tok.value as string,
+          op: op.value as string,
           left,
-          right: this.maybeBinary(this.parseAtom(), hisPrec)
-        }, hisPrec);
+          right
+        }, prec);
       }
     }
     return left;
   }
 
-  private maybeCall(expr: () => ExpressionNode): ExpressionNode {
-    const exp = expr();
-    return this.isPunc('(') ? this.parseCall(exp) : exp;
+  private maybeCall(ident: ExpressionNode): ExpressionNode {
+    return this.isPunc('(') ? this.parseCall(ident) : ident;
   }
 
   private parseAtom(): ExpressionNode {
     const input = this.input;
-    return this.maybeCall(() => {
-      if(this.isPunc('(')) {
-        this.skipPunc('(');
-        const exp = this.parseExpression();
-        this.skipPunc(')');
-        return exp;
-      }
-      const token = input.next();
-      if(!token) {
-        throw new Error('Unexpected end of input');
-      }
-      if (token.type === 'num' || token.type === 'str') {
-        return {
-          type: 'literal',
-          value: token.value
-        };
-      }
-      if(token.type === 'ident') {
-        return {
-          type: 'ident',
-          value: token.value as string
-        };
-      }
-      throw new Error(`Unexpected token: ${token.type}`);
-    });
+    if(this.isPunc('(')) {
+      this.skipPunc('(');
+      const exp = this.parseExpression();
+      this.skipPunc(')');
+      return exp;
+    }
+    const token = input.next();
+    if(!token) {
+      throw new Error('Unexpected end of input');
+    }
+    if (token.type === 'num' || token.type === 'str') {
+      return {
+        type: 'literal',
+        value: token.value
+      };
+    }
+    if(token.type === 'ident') {
+      return this.maybeCall({
+        type: 'ident',
+        value: token.value as string
+      });
+    }
+    throw new Error(`Unexpected token: ${token.type}`);
   }
 
   // 解析一个函数调用
@@ -159,9 +157,7 @@ export default class Parser {
 
   // 解析一个表达式
   private parseExpression(): ExpressionNode {
-    return this.maybeCall(() => {
-      return this.maybeBinary(this.parseAtom(), 0);
-    });
+    return this.maybeBinary(this.parseAtom(), 0);
   }
 
   private skipPunc(punc: string): void {
