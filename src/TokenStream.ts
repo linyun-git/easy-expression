@@ -1,25 +1,32 @@
 import InputStream from './InputStream';
+import { LanguageConfig } from './config';
 
 /**
  * token 类型:
- * punc: 特殊操作符: ( )
- * num: 数字: 1 2 3 4 5 6 7 8 9 0
- * str: 字符串: "hello"
- * ident: 变量名: a b c d e f g h i j k l m n o p q r s t u v w x y z
- * op: 操作符: + - * /
+ *  punc: 特殊操作符: ( ) ,
+ *  literal: 字面量: 0-9 "hello"
+ *  ident: 变量名: a-z A-Z 0-9 _
+ *  op: 操作符: + \ - * > < . ! = % ?
  */
 
-type TokenType = 'punc' | 'num' | 'str' | 'ident' | 'op';
+type TokenType = 'punc' | 'literal' | 'ident' | 'op';
+
+type Position = {
+  line: number;
+  column: number;
+};
 
 type Token = {
   type: TokenType;
-  value: string | number;
+  value: string;
+  startPos: Position;
+  endPos: Position;
 };
 
 export default class TokenStream {
   private current: Token | null = null;
 
-  constructor(private input: InputStream) {
+  constructor(private input: InputStream, private languageConfig: LanguageConfig) {
   }
 
   public peek(): Token | null {
@@ -27,7 +34,7 @@ export default class TokenStream {
   }
 
   public next(): Token | null {
-    const tok = this.current;
+    const { current: tok } = this;
     this.current = null;
     return tok || this.readNext();
   }
@@ -37,7 +44,7 @@ export default class TokenStream {
   }
 
   private readNext(): Token | null {
-    const input = this.input;
+    const { input, languageConfig } = this;
     this.readWhile(this.isWhitespace);
     if(input.eof()) {
       return null;
@@ -47,54 +54,74 @@ export default class TokenStream {
       this.readComment();
       return this.readNext();
     }
-    if(ch === '"') {
-      return this.readString();
+    // 解析字符串字面量
+    if (languageConfig.allowLiteral('string')) {
+      if(ch === '"') {
+        return this.readString();
+      }
     }
-    if(/[0-9]/.test(ch)) {
-      return this.readNumber();
+    // 解析数字字面量
+    if (languageConfig.allowLiteral('number')) {
+      if(/[0-9]/.test(ch)) {
+        return this.readNumber();
+      }
     }
-    if(/[+\-*]/.test(ch)) {
+    // 解析运算符字面量
+    if(/[+\-*><.!=%?]/.test(ch)) {
       return this.readOp();
     }
+    // 解析标识符
     if(/[a-zA-Z_]/.test(ch)) {
       return this.readIdent();
     }
+    // 解析特殊操作符
     if(/[(),]/.test(ch)) {
+      const punc = input.next();
+      const pos = input.pos();
       return {
         type: 'punc',
-        value: input.next()
+        value: punc,
+        startPos: pos,
+        endPos: pos
       };
     }
     throw new Error(`invalid character: ${ch}`);
   }
 
   private readOp(): Token {
-    const input = this.input;
-    let op = '';
+    const { input, languageConfig } = this;
+    let op = input.next();
+    const startPos = input.pos();
     let ch = input.peek();
-    while(/[+\-*]/.test(ch)) {
-      op += ch;
+    while(languageConfig.allowOperator(op + ch)) {
       input.next();
+      op += ch;
       ch = input.peek();
     }
     return {
       type: 'op',
-      value: op
+      value: op,
+      startPos,
+      endPos: input.pos()
     };
   }
 
   private readIdent(): Token {
-    const input = this.input;
-    let ident = '';
+    const { input, languageConfig } = this;
+    let ident = input.next();
+    const startPos = input.pos();
     let ch = input.peek();
-    while(/[a-zA-Z_]/.test(ch)) {
+    while(/[a-zA-Z_0-9]/.test(ch)) {
       ident += ch;
       input.next();
       ch = input.peek();
     }
+    // 标识符也允许作为运算符
     return {
-      type: 'ident',
-      value: ident
+      type: languageConfig.allowOperator(ident) ? 'op' : 'ident',
+      value: ident,
+      startPos,
+      endPos: input.pos()
     };
   }
 
@@ -103,15 +130,16 @@ export default class TokenStream {
   }
 
   private readComment() {
-    const input = this.input;
+    const { input } = this;
     input.next();
     this.readWhile(ch => ch !== '\n');
   }
 
   private readNumber(): Token {
-    const input = this.input;
+    const { input } = this;
     let dot = false;
-    let num = '';
+    let num = input.next();
+    const startPos = input.pos();
     let ch = input.peek();
     while(/[0-9.]/.test(ch)) {
       if(ch === '.') {
@@ -126,31 +154,38 @@ export default class TokenStream {
       ch = input.peek();
     }
     return {
-      type: 'num',
-      value: Number(num)
+      type: 'literal',
+      value: num,
+      startPos,
+      endPos: input.pos()
     };
   }
 
   private readString(): Token {
-    const input = this.input;
-    input.next();
-    let str = '';
+    const { input } = this;
+    let str = input.next();
+    const startPos = input.pos();
     let ch = input.next();
-    while(ch !== '"') {
+    while(ch) {
       str += ch;
+      if(ch === '"') {
+        return {
+          type: 'literal',
+          value: str,
+          startPos,
+          endPos: input.pos()
+        };
+      }
       ch = input.next();
       if(ch === '\n') {
         throw new Error('unexpected newline in string');
       }
     }
-    return {
-      type: 'str',
-      value: str
-    };
+    throw new Error('unterminated string literal');
   }
 
   private readWhile(test: (ch: string) => boolean) {
-    const input = this.input;
+    const { input } = this;
     let ch = input.peek();
     while(test(ch)) {
       input.next();

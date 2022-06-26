@@ -27,4 +27,11 @@ export default class InputStream {
   croak(msg: string) {
     throw new Error(`${msg} (${this.line}:${this.column})`);
   }
+
+  pos() {
+    return {
+      line: this.line,
+      column: this.column
+    };
+  }
 }

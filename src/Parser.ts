@@ -1,4 +1,5 @@
 import TokenStream from './TokenStream';
+import { LanguageConfig } from './config';
 
 /**
  * 字面量节点 literal
@@ -10,7 +11,7 @@ import TokenStream from './TokenStream';
 
 type LiteralNode = {
   type: 'literal';
-  value: number | string;
+  value: string;
 }
 
 type IdentNode = {
@@ -37,46 +38,34 @@ type CallNode = {
 
 export type ExpressionNode = LiteralNode | IdentNode | CallNode | BinaryNode;
 
-const PRECEDENCE = {
-  '=': 1,
-  '||': 2,
-  '&&': 3,
-  '<': 7,
-  '>': 7,
-  '<=': 7,
-  '>=': 7,
-  '==': 7,
-  '!=': 7,
-  '+': 10,
-  '-': 10,
-  '*': 20,
-  '/': 20,
-  '%': 20
-};
-
 export default class Parser {
-  constructor(private input: TokenStream) {
+  constructor(private input: TokenStream, private languageConfig: LanguageConfig) {
   }
 
   public parse(): ExpressionNode {
-    return this.parseExpression();
+    const { input } = this;
+    const result = this.parseExpression();
+    if(!input.eof()) {
+      throw new Error(`unexpected token: ${input.peek()?.value}`);
+    }
+    return result;
   }
 
   private delimited(start: string, stop: string, separator: string, parser: () => ExpressionNode): ExpressionNode[] {
-    const input = this.input;
+    const { input } = this;
     const args: any[] = [];
     let first = true;
     this.skipPunc(start);
-    while(!input.eof()) {
-      if(this.isPunc(stop)) {
+    while (!input.eof()) {
+      if (this.isPunc(stop)) {
         break;
       }
-      if(first) {
+      if (first) {
         first = false;
       } else {
         this.skipPunc(separator);
       }
-      if(this.isPunc(stop)) {
+      if (this.isPunc(stop)) {
         break;
       }
       args.push(parser());
@@ -91,22 +80,22 @@ export default class Parser {
   }
 
   private isPunc(punc: string) {
-    const input = this.input;
+    const { input } = this;
     const token = input.peek();
     return token && token.type === 'punc' && token.value === punc && token;
   }
 
   private maybeBinary(left: ExpressionNode, prec: number): ExpressionNode {
-    const input = this.input;
+    const { input, languageConfig } = this;
     const op = this.isOp();
-    if(op) {
-      const hisPrec = PRECEDENCE[op.value as '+' | '-'];
-      if(hisPrec > prec) {
+    if (op) {
+      const hisPrec = languageConfig.getOperatorPrece(op.value);
+      if (hisPrec > prec) {
         input.next();
         const right = this.maybeBinary(this.parseAtom(), hisPrec);
         return this.maybeBinary({
           type: 'binary',
-          op: op.value as string,
+          op: op.value,
           left,
           right
         }, prec);
@@ -120,30 +109,37 @@ export default class Parser {
   }
 
   private parseAtom(): ExpressionNode {
-    const input = this.input;
-    if(this.isPunc('(')) {
+    const { input, languageConfig } = this;
+    if (this.isPunc('(')) {
       this.skipPunc('(');
       const exp = this.parseExpression();
       this.skipPunc(')');
       return exp;
     }
     const token = input.next();
-    if(!token) {
-      throw new Error('Unexpected end of input');
+    if (!token) {
+      throw new Error('unexpected end of input');
     }
-    if (token.type === 'num' || token.type === 'str') {
+    if (token.type === 'literal') {
       return {
         type: 'literal',
         value: token.value
       };
     }
-    if(token.type === 'ident') {
-      return this.maybeCall({
-        type: 'ident',
-        value: token.value as string
-      });
+    if (token.type === 'ident') {
+      if(languageConfig.allowFunction()) {
+        return this.maybeCall({
+          type: 'ident',
+          value: token.value
+        });
+      } else {
+        return {
+          type: 'ident',
+          value: token.value
+        };
+      }
     }
-    throw new Error(`Unexpected token: ${token.type}`);
+    throw new Error(`unexpected token: ${token.type}`);
   }
 
   // 解析一个函数调用
@@ -161,11 +157,11 @@ export default class Parser {
   }
 
   private skipPunc(punc: string): void {
-    const input = this.input;
-    if(this.isPunc(punc)) {
+    const { input } = this;
+    if (this.isPunc(punc)) {
       input.next();
     } else {
-      throw new Error(`Expected punctuation: ${punc}`);
+      throw new Error(`unexpected punctuation: ${punc}`);
     }
   }
 }
