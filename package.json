@@ -1,5 +1,5 @@
 {
-  "name": "expr-js",
+  "name": "easy-expression",
   "version": "0.1.0",
   "description": "A expression interpreter for JavaScript",
   "main": "dist/index.js",
@@ -8,7 +8,7 @@
     "build": "eslint src/** && tsc",
     "test": "jest"
   },
-  "homepage": "https://github.com/linyun-git/expr-js",
+  "homepage": "https://github.com/linyun-git/easy-expression",
   "files": [
     "dist"
   ],

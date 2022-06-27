@@ -1,4 +1,4 @@
-# ExprJS
+# EasyExpression
 
 可定制化表达式解释器
 
@@ -28,10 +28,10 @@
 ``` shell
 
 # 使用npm安装
-npm install expr-js --save
+npm install easy-expression --save
 
 # 使用yarn安装
-yarn add expr-js
+yarn add easy-expression
 
 ```
 
@@ -39,7 +39,7 @@ yarn add expr-js
 
 ``` javascript
 
-import compile from 'expr-js';
+import compile from 'easy-expression';
 
 const runner = compile('2 AND 2 IS MULTIPLE(2, 2)', {
   // 配置二元运算符
