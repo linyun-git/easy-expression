@@ -20,8 +20,13 @@ type Token = {
 
 export default class TokenStream {
   private current: Token | null = null;
+  private lastToken: Token | null = null;
 
   constructor(private input: InputStream, private languageConfig: LanguageConfig) {
+  }
+
+  public last(): Token | null {
+    return this.lastToken;
   }
 
   public peek(): Token | null {
@@ -31,7 +36,8 @@ export default class TokenStream {
   public next(): Token | null {
     const { current: tok } = this;
     this.current = null;
-    return tok || this.readNext();
+    this.lastToken = tok || this.readNext();
+    return this.lastToken;
   }
 
   public eof() {
@@ -70,7 +76,7 @@ export default class TokenStream {
       }
     }
     // 解析运算符字面量
-    if(/[+/\-*><.!=%?]/.test(ch)) {
+    if(/[+/\-*><.!=%?]/.test(ch) && languageConfig.allowOperator(ch)) {
       return this.readOp();
     }
     // 解析标识符

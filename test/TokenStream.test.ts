@@ -4,7 +4,30 @@ import { LanguageConfig } from '../src/config';
 
 test('read literal', () => {
   const inputStream = new InputStream('1.1. + .2 + "string"');
-  const languageConfig = new LanguageConfig({});
+  const languageConfig = new LanguageConfig({
+    operators: [
+      {
+        token: '+',
+        precedence: 12
+      },
+      {
+        token: '-',
+        precedence: 12
+      },
+      {
+        token: '*',
+        precedence: 13
+      },
+      {
+        token: '/',
+        precedence: 13
+      },
+      {
+        token: '.',
+        precedence: 14
+      }
+    ]
+  });
   const input = new TokenStream(inputStream, languageConfig);
   expect(input.next()).toEqual({
     type: 'literal',
@@ -65,7 +88,14 @@ test('read punc', () => {
 
 test('read ident', () => {
   const inputStream = new InputStream('name.attr is null');
-  const languageConfig = new LanguageConfig({});
+  const languageConfig = new LanguageConfig({
+    operators: [
+      {
+        token: '.',
+        precedence: 14
+      }
+    ]
+  });
   const input = new TokenStream(inputStream, languageConfig);
   expect(input.next()).toEqual({
     type: 'ident',
@@ -184,7 +214,7 @@ test('test eof', () => {
   expect(input.eof()).toBe(true);
 });
 
-test('custom language', () => {
+test('test custom language', () => {
   const inputStream = new InputStream('1 AND 2 is "12"');
   const languageConfig = new LanguageConfig({
     literals: ['number'],

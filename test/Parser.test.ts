@@ -10,7 +10,9 @@ test('test literal', () => {
   const parser = new Parser(tokenStream, languageConfig);
   expect(parser.parse()).toEqual({
     type: 'literal',
-    value: '1.1'
+    value: '1.1',
+    startPos: '1:1',
+    endPos: '1:3'
   });
 });
 
@@ -21,7 +23,9 @@ test('test ident', () => {
   const parser = new Parser(tokenStream, languageConfig);
   expect(parser.parse()).toEqual({
     type: 'ident',
-    value: 'number'
+    value: 'number',
+    startPos: '1:1',
+    endPos: '1:6'
   });
 });
 
@@ -34,13 +38,19 @@ test('test binary', () => {
     type: 'binary',
     left: {
       type: 'ident',
-      value: 'num1'
+      value: 'num1',
+      startPos: '1:1',
+      endPos: '1:4'
     },
     right: {
       type: 'ident',
-      value: 'num2'
+      value: 'num2',
+      startPos: '1:8',
+      endPos: '1:11'
     },
-    op: '+'
+    op: '+',
+    startPos: '1:1',
+    endPos: '1:11'
   });
 });
 
@@ -51,64 +61,178 @@ test('test call', () => {
   const parser = new Parser(tokenStream, languageConfig);
   expect(parser.parse()).toEqual({
     type: 'call',
-    func: {
-      type: 'ident',
-      value: 'add'
-    },
+    func: 'add',
     args: [
       {
         type: 'ident',
-        value: 'num1'
+        value: 'num1',
+        startPos: '1:5',
+        endPos: '1:8'
       },
       {
         type: 'ident',
-        value: 'num2'
+        value: 'num2',
+        startPos: '1:11',
+        endPos: '1:14'
       }
-    ]
+    ],
+    startPos: '1:1',
+    endPos: '1:15'
   });
 });
 
-// test('test add(a + 1, 1*2*3)', () => {
-//   const parser = new Parser(new TokenStream(new InputStream('add(a + 1, 1*2*3)')));
-//   expect(parser.parse()).toEqual({
-//     type: 'call',
-//     func: {
-//       type: 'ident',
-//       value: 'add'
-//     },
-//     args: [
-//       {
-//         type: 'binary',
-//         left: {
-//           type: 'ident',
-//           value: 'a'
-//         },
-//         right: {
-//           type: 'literal',
-//           value: 1
-//         },
-//         op: '+'
-//       },
-//       {
-//         type: 'binary',
-//         left: {
-//           type: 'binary',
-//           left: {
-//             type: 'literal',
-//             value: 1
-//           },
-//           right: {
-//             type: 'literal',
-//             value: 2
-//           },
-//           op: '*'
-//         },
-//         right: {
-//           type: 'literal',
-//           value: 3
-//         },
-//         op: '*'
-//       }
-//     ]
-//   });
-// });
+test('test punc', () => {
+  const inputStream = new InputStream('(add(num1, num2) + 1) * 2');
+  const languageConfig = new LanguageConfig({});
+  const tokenStream = new TokenStream(inputStream, languageConfig);
+  const parser = new Parser(tokenStream, languageConfig);
+  expect(parser.parse()).toEqual({
+    type: 'binary',
+    left: {
+      type: 'binary',
+      left: {
+        type: 'call',
+        func: 'add',
+        args: [
+          {
+            type: 'ident',
+            value: 'num1',
+            startPos: '1:6',
+            endPos: '1:9'
+          },
+          {
+            type: 'ident',
+            value: 'num2',
+            startPos: '1:12',
+            endPos: '1:15'
+          }
+        ],
+        startPos: '1:2',
+        endPos: '1:16'
+      },
+      right: {
+        type: 'literal',
+        value: '1',
+        startPos: '1:20',
+        endPos: '1:20'
+      },
+      op: '+',
+      startPos: '1:2',
+      endPos: '1:20'
+    },
+    right: {
+      type: 'literal',
+      value: '2',
+      startPos: '1:25',
+      endPos: '1:25'
+    },
+    op: '*',
+    startPos: '1:2',
+    endPos: '1:25'
+  });
+});
+
+test('test precedence', () => {
+  const inputStream = new InputStream('1 + 1 * 2');
+  const languageConfig = new LanguageConfig({});
+  const tokenStream = new TokenStream(inputStream, languageConfig);
+  const parser = new Parser(tokenStream, languageConfig);
+  expect(parser.parse()).toEqual({
+    type: 'binary',
+    left: {
+      type: 'literal',
+      value: '1',
+      startPos: '1:1',
+      endPos: '1:1'
+    },
+    right: {
+      type: 'binary',
+      left: {
+        type: 'literal',
+        value: '1',
+        startPos: '1:5',
+        endPos: '1:5'
+      },
+      right: {
+        type: 'literal',
+        value: '2',
+        startPos: '1:9',
+        endPos: '1:9'
+      },
+      op: '*',
+      startPos: '1:5',
+      endPos: '1:9'
+    },
+    op: '+',
+    startPos: '1:1',
+    endPos: '1:9'
+  });
+});
+
+test('test custom language', () => {
+  const inputStream = new InputStream('1 AND 1 IS 2');
+  const languageConfig = new LanguageConfig({
+    operators: [
+      {
+        token: 'AND',
+        precedence: 12
+      },
+      {
+        token: 'IS',
+        precedence: 11
+      }
+    ]
+  });
+  const tokenStream = new TokenStream(inputStream, languageConfig);
+  const parser = new Parser(tokenStream, languageConfig);
+  expect(parser.parse()).toEqual({
+    type: 'binary',
+    left: {
+      type: 'binary',
+      left: {
+        type: 'literal',
+        value: '1',
+        startPos: '1:1',
+        endPos: '1:1'
+      },
+      right: {
+        type: 'literal',
+        value: '1',
+        startPos: '1:7',
+        endPos: '1:7'
+      },
+      op: 'AND',
+      startPos: '1:1',
+      endPos: '1:7'
+    },
+    right: {
+      type: 'literal',
+      value: '2',
+      startPos: '1:12',
+      endPos: '1:12'
+    },
+    op: 'IS',
+    startPos: '1:1',
+    endPos: '1:12'
+  });
+});
+
+test("test don't allow function", () => {
+  const inputStream = new InputStream('1 AND 1 IS ADD(1, 1)');
+  const languageConfig = new LanguageConfig({
+    operators: [
+      {
+        token: 'AND',
+        precedence: 12
+      },
+      {
+        token: 'IS',
+        precedence: 11
+      }
+    ],
+    allowFunction: false
+  });
+  const tokenStream = new TokenStream(inputStream, languageConfig);
+  const parser = new Parser(tokenStream, languageConfig);
+  expect(() => parser.parse()).toThrow('unexpected token: ( 1:15-1:15');
+});

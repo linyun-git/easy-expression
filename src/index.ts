@@ -3,22 +3,27 @@ import TokenStream from './TokenStream';
 import InputStream from './InputStream';
 import { LanguageConfig, LanguageConfigParams, RuntimeConfig, RuntimeConfigParams } from './config';
 
-export class Runner {
+class Runner {
   private ast: ExpressionNode;
   private runtimeConfig: RuntimeConfig | null = null;
-  private evalStack: ExpressionNode[] | null = null;
+  evalStack: ExpressionNode[] | null = null;
 
   constructor(parser: Parser) {
     this.ast = parser.parse();
   }
 
-  run(config: RuntimeConfigParams) {
-    this.runtimeConfig = new RuntimeConfig(config);
-    this.evalStack = [];
-    const result = this.eval(this.ast);
-    this.evalStack = null;
-    this.runtimeConfig = null;
-    return result;
+  run(config?: RuntimeConfigParams): any {
+    try {
+      this.runtimeConfig = new RuntimeConfig(config);
+      this.evalStack = [];
+      const result = this.eval(this.ast);
+      this.evalStack = null;
+      this.runtimeConfig = null;
+      return result;
+    } catch (e: any) {
+      const top = this.evalStack!.pop();
+      throw new Error(`${e.message ?? e} ${top?.startPos}-${top?.endPos}`);
+    }
   }
 
   private eval(node: ExpressionNode) {
@@ -34,7 +39,7 @@ export class Runner {
         break;
       case 'call': {
         const args = node.args.map(arg => this.eval(arg));
-        result = runtimeConfig.handleFunction(node.func.value, args);
+        result = runtimeConfig.handleFunction(node.func, args);
         break;
       }
       case 'binary': {
@@ -51,9 +56,9 @@ export class Runner {
   }
 }
 
-export function compile(expression: string, config?: LanguageConfigParams) {
-  if (!expression || !expression.trim()) {
-    throw new Error('empty expression');
+export default function compile(expression: string, config?: LanguageConfigParams) {
+  if (typeof expression !== 'string') {
+    throw new Error('TypeError');
   }
   const languageConfig = new LanguageConfig(config);
   const inputStream = new InputStream(expression);
@@ -62,11 +67,4 @@ export function compile(expression: string, config?: LanguageConfigParams) {
   return new Runner(parser);
 }
 
-const inputStream = new InputStream('name.attr is null');
-const languageConfig = new LanguageConfig({});
-const input = new TokenStream(inputStream, languageConfig);
-console.log(input.next());
-input.next();
-console.log(input.next());
-console.log(input.next());
-console.log(input.next());
+export * from './config';

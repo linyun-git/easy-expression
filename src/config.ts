@@ -25,7 +25,7 @@ export interface OperatorHandler {
 
 // 字面量捕获器
 export interface LiteralHandler {
-  (literal: number | string): any;
+  (literal: string): any;
 }
 
 // 函数捕获器
@@ -52,9 +52,9 @@ export interface RuntimeConfigParams {
 
 // 语言基本配置
 export class LanguageConfig {
-  private literals: Array<Literal> = ['number', 'string'];
+  literals: Array<Literal> = ['number', 'string'];
 
-  private operators: Array<Operator> = [
+  operators: Array<Operator> = [
     {
       token: '+',
       precedence: 12
@@ -73,7 +73,7 @@ export class LanguageConfig {
     }
   ];
 
-  private _allowFunction: boolean = true;
+  _allowFunction: boolean = true;
 
   constructor(config: LanguageConfigParams = {}) {
     const { literals = true, operators = true, allowFunction = true } = config;
@@ -113,15 +113,15 @@ export class LanguageConfig {
 
 // 运行时配置
 export class RuntimeConfig {
-  private constants: StringMap<any>;
+  constants: StringMap<any>;
 
-  private constantsHandler: ConstantsHandler | null;
+  constantsHandler: ConstantsHandler | null;
 
-  private functionHandlers: StringMap<FunctionHandler>;
+  functionHandlers: StringMap<FunctionHandler>;
 
-  private literalHandler: LiteralHandler | null;
+  literalHandler: LiteralHandler | null;
 
-  private operatorHandlers: StringMap<OperatorHandler> = {
+  operatorHandlers: StringMap<OperatorHandler> = {
     '+'(num1: any, num2: any) {
       return num1 + num2;
     },

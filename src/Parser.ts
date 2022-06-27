@@ -12,11 +12,15 @@ import { LanguageConfig } from './config';
 type LiteralNode = {
   type: 'literal';
   value: string;
+  startPos: string;
+  endPos: string;
 }
 
 type IdentNode = {
   type: 'ident';
   value: string;
+  startPos: string;
+  endPos: string;
 };
 
 type BinaryNode = {
@@ -26,14 +30,18 @@ type BinaryNode = {
   // eslint-disable-next-line no-use-before-define
   right: ExpressionNode;
   op: string;
+  startPos: string;
+  endPos: string;
 }
 
 type CallNode = {
   type: 'call';
   // eslint-disable-next-line no-use-before-define
-  func: IdentNode;
+  func: string;
   // eslint-disable-next-line no-use-before-define
   args: Array<ExpressionNode>;
+  startPos: string;
+  endPos: string;
 }
 
 export type ExpressionNode = LiteralNode | IdentNode | CallNode | BinaryNode;
@@ -97,14 +105,16 @@ export default class Parser {
           type: 'binary',
           op: op.value,
           left,
-          right
+          right,
+          startPos: left.startPos,
+          endPos: right.endPos
         }, prec);
       }
     }
     return left;
   }
 
-  private maybeCall(ident: ExpressionNode): ExpressionNode {
+  private maybeCall(ident: IdentNode): ExpressionNode {
     return this.isPunc('(') ? this.parseCall(ident) : ident;
   }
 
@@ -123,19 +133,25 @@ export default class Parser {
     if (token.type === 'literal') {
       return {
         type: 'literal',
-        value: token.value
+        value: token.value,
+        startPos: token.startPos,
+        endPos: token.endPos
       };
     }
     if (token.type === 'ident') {
       if(languageConfig.allowFunction()) {
         return this.maybeCall({
           type: 'ident',
-          value: token.value
+          value: token.value,
+          startPos: token.startPos,
+          endPos: token.endPos
         });
       } else {
         return {
           type: 'ident',
-          value: token.value
+          value: token.value,
+          startPos: token.startPos,
+          endPos: token.endPos
         };
       }
     }
@@ -143,11 +159,14 @@ export default class Parser {
   }
 
   // 解析一个函数调用
-  private parseCall(func: any): CallNode {
+  private parseCall(funcIdent: IdentNode): CallNode {
+    const { input } = this;
     return {
       type: 'call',
-      func,
-      args: this.delimited('(', ')', ',', () => this.parseExpression())
+      func: funcIdent.value,
+      args: this.delimited('(', ')', ',', () => this.parseExpression()),
+      startPos: funcIdent.startPos,
+      endPos: input.last()!.endPos
     };
   }
 
