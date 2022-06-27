@@ -11,16 +11,11 @@ import { LanguageConfig } from './config';
 
 type TokenType = 'punc' | 'literal' | 'ident' | 'op';
 
-type Position = {
-  line: number;
-  column: number;
-};
-
 type Token = {
   type: TokenType;
   value: string;
-  startPos: Position;
-  endPos: Position;
+  startPos: string;
+  endPos: string;
 };
 
 export default class TokenStream {
@@ -66,8 +61,16 @@ export default class TokenStream {
         return this.readNumber();
       }
     }
+    if(/\./.test(ch)) {
+      input.next();
+      const next = input.peek();
+      input.back();
+      if(/[0-9]/.test(next)) {
+        return this.readNumber();
+      }
+    }
     // 解析运算符字面量
-    if(/[+\-*><.!=%?]/.test(ch)) {
+    if(/[+/\-*><.!=%?]/.test(ch)) {
       return this.readOp();
     }
     // 解析标识符
@@ -76,8 +79,8 @@ export default class TokenStream {
     }
     // 解析特殊操作符
     if(/[(),]/.test(ch)) {
-      const punc = input.next();
       const pos = input.pos();
+      const punc = input.next();
       return {
         type: 'punc',
         value: punc,
@@ -85,43 +88,41 @@ export default class TokenStream {
         endPos: pos
       };
     }
-    throw new Error(`invalid character: ${ch}`);
+    throw new Error(`invalid character: ${ch} ${input.pos()}`);
   }
 
   private readOp(): Token {
     const { input, languageConfig } = this;
-    let op = input.next();
     const startPos = input.pos();
-    let ch = input.peek();
-    while(languageConfig.allowOperator(op + ch)) {
-      input.next();
-      op += ch;
-      ch = input.peek();
+    let lastPos = input.pos();
+    let op = input.next();
+    while(languageConfig.allowOperator(op + input.peek())) {
+      lastPos = input.pos();
+      op += input.next();
     }
     return {
       type: 'op',
       value: op,
       startPos,
-      endPos: input.pos()
+      endPos: lastPos
     };
   }
 
   private readIdent(): Token {
     const { input, languageConfig } = this;
-    let ident = input.next();
     const startPos = input.pos();
-    let ch = input.peek();
-    while(/[a-zA-Z_0-9]/.test(ch)) {
-      ident += ch;
-      input.next();
-      ch = input.peek();
+    let lastPos = input.pos();
+    let ident = input.next();
+    while(!input.eof() && /[a-zA-Z_0-9]/.test(input.peek())) {
+      lastPos = input.pos();
+      ident += input.next();
     }
     // 标识符也允许作为运算符
     return {
       type: languageConfig.allowOperator(ident) ? 'op' : 'ident',
       value: ident,
       startPos,
-      endPos: input.pos()
+      endPos: lastPos
     };
   }
 
@@ -137,59 +138,56 @@ export default class TokenStream {
 
   private readNumber(): Token {
     const { input } = this;
-    let dot = false;
-    let num = input.next();
     const startPos = input.pos();
-    let ch = input.peek();
-    while(/[0-9.]/.test(ch)) {
-      if(ch === '.') {
-        if(dot) {
-          throw new Error('invalid number');
+    let lastPos = input.pos();
+    let num = input.next();
+    let hasDot = num === '.';
+    while(/[0-9.]/.test(input.peek())) {
+      if(input.peek() === '.') {
+        if(hasDot) {
+          break;
         } else {
-          dot = true;
+          hasDot = true;
         }
       }
-      num += ch;
-      input.next();
-      ch = input.peek();
+      lastPos = input.pos();
+      num += input.next();
     }
     return {
       type: 'literal',
       value: num,
       startPos,
-      endPos: input.pos()
+      endPos: lastPos
     };
   }
 
   private readString(): Token {
     const { input } = this;
-    let str = input.next();
     const startPos = input.pos();
-    let ch = input.next();
-    while(ch) {
-      str += ch;
+    let str = input.next();
+    while(!input.eof()) {
+      if(input.peek() === '\n') {
+        throw new Error(`unexpected newline in string ${input.pos()}`);
+      }
+      const endPos = input.pos();
+      const ch = input.peek();
+      str += input.next();
       if(ch === '"') {
         return {
           type: 'literal',
           value: str,
           startPos,
-          endPos: input.pos()
+          endPos
         };
       }
-      ch = input.next();
-      if(ch === '\n') {
-        throw new Error('unexpected newline in string');
-      }
     }
-    throw new Error('unterminated string literal');
+    throw new Error(`unterminated string literal ${input.pos()}`);
   }
 
   private readWhile(test: (ch: string) => boolean) {
     const { input } = this;
-    let ch = input.peek();
-    while(test(ch)) {
+    while(test(input.peek())) {
       input.next();
-      ch = input.peek();
     }
   }
 }

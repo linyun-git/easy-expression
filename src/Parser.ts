@@ -46,7 +46,7 @@ export default class Parser {
     const { input } = this;
     const result = this.parseExpression();
     if(!input.eof()) {
-      throw new Error(`unexpected token: ${input.peek()?.value}`);
+      throw new Error(`unexpected token: ${input.peek()?.value} ${input.peek()?.startPos}-${input.peek()?.endPos}`);
     }
     return result;
   }
@@ -139,7 +139,7 @@ export default class Parser {
         };
       }
     }
-    throw new Error(`unexpected token: ${token.type}`);
+    throw new Error(`unexpected token: ${token.type} ${token.startPos}-${token.endPos}`);
   }
 
   // 解析一个函数调用
@@ -161,7 +161,7 @@ export default class Parser {
     if (this.isPunc(punc)) {
       input.next();
     } else {
-      throw new Error(`unexpected punctuation: ${punc}`);
+      throw new Error(`unexpected punctuation: ${punc} ${input.peek()?.startPos}-${input.peek()?.endPos}`);
     }
   }
 }

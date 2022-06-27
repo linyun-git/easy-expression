@@ -61,3 +61,12 @@ export function compile(expression: string, config?: LanguageConfigParams) {
   const parser = new Parser(tokenStream, languageConfig);
   return new Runner(parser);
 }
+
+const inputStream = new InputStream('name.attr is null');
+const languageConfig = new LanguageConfig({});
+const input = new TokenStream(inputStream, languageConfig);
+console.log(input.next());
+input.next();
+console.log(input.next());
+console.log(input.next());
+console.log(input.next());
