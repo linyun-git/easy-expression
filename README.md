@@ -1,4 +1,4 @@
-# ExpressionJs
+# ExprJS
 
 可定制化表达式解释器
 
@@ -23,15 +23,15 @@
 
 ## 开始使用
 
-安装ExpressionJs
+安装
 
 ``` shell
 
 # 使用npm安装
-npm install expression-js --save
+npm install expr-js --save
 
 # 使用yarn安装
-yarn add expression-js
+yarn add expr-js
 
 ```
 
@@ -39,7 +39,7 @@ yarn add expression-js
 
 ``` javascript
 
-import compile from 'expression-js';
+import compile from 'expr-js';
 
 const runner = compile('2 AND 2 IS MULTIPLE(2, 2)', {
   // 配置二元运算符
