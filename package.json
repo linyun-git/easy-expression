@@ -1,13 +1,17 @@
 {
   "name": "expression-js",
-  "version": "1.0.0",
-  "description": "A expression constructor for js",
+  "version": "0.1.0",
+  "description": "A expression interpreter for JavaScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "eslint src/** && tsc",
     "test": "jest"
   },
+  "homepage": "https://github.com/linyun-git/expression-js",
+  "files": [
+    "dist"
+  ],
   "keywords": [
     "expression",
     "javascript"
