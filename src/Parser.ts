@@ -73,9 +73,6 @@ export default class Parser {
       } else {
         this.skipPunc(separator);
       }
-      if (this.isPunc(stop)) {
-        break;
-      }
       args.push(parser());
     }
     this.skipPunc(stop);
@@ -126,11 +123,12 @@ export default class Parser {
       this.skipPunc(')');
       return exp;
     }
-    const token = input.next();
+    const token = input.peek();
     if (!token) {
       const lastToken = input.last()!;
       throw new Error(`unexpected end of input ${lastToken.startPos}-${lastToken.endPos}`);
     }
+    input.next();
     if (token.type === 'literal') {
       return {
         type: 'literal',
@@ -156,7 +154,7 @@ export default class Parser {
         };
       }
     }
-    throw new Error(`unexpected token: ${token.type} ${token.startPos}-${token.endPos}`);
+    throw new Error(`unexpected token: ${token.value} ${token.startPos}-${token.endPos}`);
   }
 
   // 解析一个函数调用
@@ -181,7 +179,7 @@ export default class Parser {
     if (this.isPunc(punc)) {
       input.next();
     } else {
-      throw new Error(`unexpected punctuation: ${punc} ${input.peek()?.startPos}-${input.peek()?.endPos}`);
+      throw new Error(`unexpected punctuation: ${punc} ${input.last()?.startPos}-${input.last()?.endPos}`);
     }
   }
 }

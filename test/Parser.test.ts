@@ -236,3 +236,27 @@ test("test don't allow function", () => {
   const parser = new Parser(tokenStream, languageConfig);
   expect(() => parser.parse()).toThrow('unexpected token: ( 1:15-1:15');
 });
+
+test('test error operator', () => {
+  const inputStream = new InputStream('1 +');
+  const languageConfig = new LanguageConfig();
+  const tokenStream = new TokenStream(inputStream, languageConfig);
+  const parser = new Parser(tokenStream, languageConfig);
+  expect(() => parser.parse()).toThrow('unexpected end of input 1:3-1:3');
+});
+
+test('test error punc', () => {
+  const inputStream = new InputStream('1 )');
+  const languageConfig = new LanguageConfig();
+  const tokenStream = new TokenStream(inputStream, languageConfig);
+  const parser = new Parser(tokenStream, languageConfig);
+  expect(() => parser.parse()).toThrow('unexpected token: ) 1:3-1:3');
+});
+
+test('test error function', () => {
+  const inputStream = new InputStream('a(1, 2,)');
+  const languageConfig = new LanguageConfig();
+  const tokenStream = new TokenStream(inputStream, languageConfig);
+  const parser = new Parser(tokenStream, languageConfig);
+  expect(() => parser.parse()).toThrow('unexpected token: ) 1:8-1:8');
+});
