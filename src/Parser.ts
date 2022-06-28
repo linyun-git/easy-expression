@@ -128,7 +128,8 @@ export default class Parser {
     }
     const token = input.next();
     if (!token) {
-      throw new Error('unexpected end of input');
+      const lastToken = input.last()!;
+      throw new Error(`unexpected end of input ${lastToken.startPos}-${lastToken.endPos}`);
     }
     if (token.type === 'literal') {
       return {
